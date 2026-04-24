@@ -28,7 +28,8 @@ public class GamePanel extends JPanel implements ActionListener {
 
     public GamePanel(int scale) {
         this.scale = scale;
-        int panelW = (TILE * GRID_W + 120) * scale;
+        // TĂNG CHIỀU RỘNG PANEL: Thêm +140 thay vì +120 để không bị mất cạnh phải
+        int panelW = (TILE * GRID_W + 140) * scale;
         int panelH = (TILE * GRID_H + 40) * scale;
         
         this.setPreferredSize(new Dimension(panelW, panelH));
@@ -173,7 +174,7 @@ public class GamePanel extends JPanel implements ActionListener {
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g;
 
-        // Vẽ màn hình chơi chính
+        // --- 1. VẼ BOARD CHÍNH ---
         int boardW = TILE * GRID_W * scale;
         int boardH = TILE * GRID_H * scale;
         g2.setColor(Color.WHITE);
@@ -182,27 +183,33 @@ public class GamePanel extends JPanel implements ActionListener {
         g2.setStroke(new BasicStroke(3));
         g2.drawRect(OFFSET_X * scale, OFFSET_Y * scale, boardW, boardH);
 
-        // Vẽ các khối gạch bên trong board
         g2.translate(OFFSET_X * scale, OFFSET_Y * scale);
         ArrayList<Brick> allBricks = new ArrayList<>(settledBricks);
         if (activeShape != null) allBricks.addAll(activeShape.bricks);
         for (Brick b : allBricks) b.draw(g2, scale);
         g2.translate(-OFFSET_X * scale, -OFFSET_Y * scale);
 
-        // Vẽ ô điểm
+        // --- 2. VẼ Ô ĐIỂM (CĂN GIỮA SỐ) ---
         int scoreBoxX = (OFFSET_X + TILE * GRID_W + 20) * scale;
         int scoreBoxY = OFFSET_Y * scale;
-        int scoreBoxW = 80 * scale;
+        int scoreBoxW = 90 * scale; // Tăng nhẹ độ rộng box
         int scoreBoxH = 40 * scale;
+
         g2.setColor(Color.WHITE);
         g2.fillRect(scoreBoxX, scoreBoxY, scoreBoxW, scoreBoxH);
         g2.setColor(Color.BLACK);
         g2.drawRect(scoreBoxX, scoreBoxY, scoreBoxW, scoreBoxH);
-        g2.setFont(new Font("Monospaced", Font.BOLD, 12 * scale));
-        g2.drawString(String.format("%06d", score), scoreBoxX + 10 * scale, scoreBoxY + 25 * scale);
+        
+        // Logic căn giữa số điểm
+        g2.setFont(new Font("Monospaced", Font.BOLD, 14 * scale));
+        String scoreText = String.format("%06d", score);
+        FontMetrics scoreMetrics = g2.getFontMetrics();
+        int textX = scoreBoxX + (scoreBoxW - scoreMetrics.stringWidth(scoreText)) / 2;
+        int textY = scoreBoxY + (scoreBoxH - scoreMetrics.getHeight()) / 2 + scoreMetrics.getAscent();
+        g2.drawString(scoreText, textX, textY);
 
-        // Vẽ ô gạch tiếp theo
-        int nextBoxX = scoreBoxX + 10 * scale;
+        // --- 3. VẼ Ô GẠCH TIẾP THEO ---
+        int nextBoxX = scoreBoxX + 15 * scale;
         int nextBoxY = scoreBoxY + 100 * scale;
         int nextBoxSize = 60 * scale;
         g2.setColor(Color.WHITE);
@@ -221,24 +228,16 @@ public class GamePanel extends JPanel implements ActionListener {
             g2.translate(-(nextBoxX + 15 * scale), -(nextBoxY + 15 * scale));
         }
 
-        // --- HỆ THỐNG GAME OVER CĂN GIỮA BOARD CHÍNH ---
+        // --- 4. GAME OVER ---
         if (isGameOver) {
-            // Lớp phủ tối chỉ trong phạm vi board
             g2.setColor(new Color(0, 0, 0, 150));
             g2.fillRect(OFFSET_X * scale, OFFSET_Y * scale, boardW, boardH);
-
             g2.setColor(Color.RED);
             g2.setFont(new Font("Arial", Font.BOLD, 20 * scale));
-            
             String msg = "GAME OVER";
-            FontMetrics metrics = g2.getFontMetrics();
-            
-            // Tính toán X: Lấy tâm của board trừ đi nửa độ dài của chữ
-            int x = (OFFSET_X * scale) + (boardW - metrics.stringWidth(msg)) / 2;
-            
-            // Tính toán Y: Lấy tâm của board
+            FontMetrics msgMetrics = g2.getFontMetrics();
+            int x = (OFFSET_X * scale) + (boardW - msgMetrics.stringWidth(msg)) / 2;
             int y = (OFFSET_Y * scale) + (boardH / 2);
-            
             g2.drawString(msg, x, y);
         }
     }
