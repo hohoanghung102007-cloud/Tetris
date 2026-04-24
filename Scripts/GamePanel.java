@@ -63,16 +63,13 @@ public class GamePanel extends JPanel implements ActionListener {
             for (String t : types) typeBag.add(t);
             Collections.shuffle(typeBag);
         }
-
         if (nextShape == null) {
             nextShape = new Shape(typeBag.remove(0), 0, 0);
         }
-        
         activeShape = nextShape;
         for(Brick b : activeShape.bricks) {
             b.x += TILE * (GRID_W / 2);
         }
-
         if (typeBag.isEmpty()) {
             String[] types = {"I", "O", "T", "L", "J"};
             for (String t : types) typeBag.add(t);
@@ -176,6 +173,7 @@ public class GamePanel extends JPanel implements ActionListener {
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g;
 
+        // Vẽ màn hình chơi chính
         int boardW = TILE * GRID_W * scale;
         int boardH = TILE * GRID_H * scale;
         g2.setColor(Color.WHITE);
@@ -184,29 +182,29 @@ public class GamePanel extends JPanel implements ActionListener {
         g2.setStroke(new BasicStroke(3));
         g2.drawRect(OFFSET_X * scale, OFFSET_Y * scale, boardW, boardH);
 
+        // Vẽ các khối gạch bên trong board
         g2.translate(OFFSET_X * scale, OFFSET_Y * scale);
         ArrayList<Brick> allBricks = new ArrayList<>(settledBricks);
         if (activeShape != null) allBricks.addAll(activeShape.bricks);
         for (Brick b : allBricks) b.draw(g2, scale);
         g2.translate(-OFFSET_X * scale, -OFFSET_Y * scale);
 
+        // Vẽ ô điểm
         int scoreBoxX = (OFFSET_X + TILE * GRID_W + 20) * scale;
         int scoreBoxY = OFFSET_Y * scale;
         int scoreBoxW = 80 * scale;
         int scoreBoxH = 40 * scale;
-
         g2.setColor(Color.WHITE);
         g2.fillRect(scoreBoxX, scoreBoxY, scoreBoxW, scoreBoxH);
         g2.setColor(Color.BLACK);
         g2.drawRect(scoreBoxX, scoreBoxY, scoreBoxW, scoreBoxH);
-        
         g2.setFont(new Font("Monospaced", Font.BOLD, 12 * scale));
         g2.drawString(String.format("%06d", score), scoreBoxX + 10 * scale, scoreBoxY + 25 * scale);
 
+        // Vẽ ô gạch tiếp theo
         int nextBoxX = scoreBoxX + 10 * scale;
         int nextBoxY = scoreBoxY + 100 * scale;
         int nextBoxSize = 60 * scale;
-
         g2.setColor(Color.WHITE);
         g2.fillRect(nextBoxX, nextBoxY, nextBoxSize, nextBoxSize);
         g2.setColor(Color.BLACK);
@@ -215,26 +213,33 @@ public class GamePanel extends JPanel implements ActionListener {
         if (nextShape != null) {
             g2.translate(nextBoxX + 15 * scale, nextBoxY + 15 * scale);
             for (Brick b : nextShape.bricks) {
-                // ĐÃ SỬA LỖI Ở ĐÂY: Dùng double thay vì int
-                double originalX = b.x; 
-                double originalY = b.y;
-                
-                b.x = (b.x / TILE) * (TILE - 2); 
-                b.y = (b.y / TILE) * (TILE - 2);
+                double originalX = b.x; double originalY = b.y;
+                b.x = (b.x / TILE) * (TILE - 2); b.y = (b.y / TILE) * (TILE - 2);
                 b.draw(g2, scale);
-                
-                b.x = originalX; 
-                b.y = originalY; 
+                b.x = originalX; b.y = originalY;
             }
             g2.translate(-(nextBoxX + 15 * scale), -(nextBoxY + 15 * scale));
         }
 
+        // --- HỆ THỐNG GAME OVER CĂN GIỮA BOARD CHÍNH ---
         if (isGameOver) {
+            // Lớp phủ tối chỉ trong phạm vi board
             g2.setColor(new Color(0, 0, 0, 150));
-            g2.fillRect(0, 0, getWidth(), getHeight());
+            g2.fillRect(OFFSET_X * scale, OFFSET_Y * scale, boardW, boardH);
+
             g2.setColor(Color.RED);
             g2.setFont(new Font("Arial", Font.BOLD, 20 * scale));
-            g2.drawString("GAME OVER", (OFFSET_X + 20) * scale, boardH / 2 + OFFSET_Y * scale);
+            
+            String msg = "GAME OVER";
+            FontMetrics metrics = g2.getFontMetrics();
+            
+            // Tính toán X: Lấy tâm của board trừ đi nửa độ dài của chữ
+            int x = (OFFSET_X * scale) + (boardW - metrics.stringWidth(msg)) / 2;
+            
+            // Tính toán Y: Lấy tâm của board
+            int y = (OFFSET_Y * scale) + (boardH / 2);
+            
+            g2.drawString(msg, x, y);
         }
     }
 }
