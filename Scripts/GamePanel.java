@@ -28,7 +28,6 @@ public class GamePanel extends JPanel implements ActionListener {
 
     public GamePanel(int scale) {
         this.scale = scale;
-        // Tăng chiều rộng để đảm bảo không mất cạnh phải
         int panelW = (TILE * GRID_W + 140) * scale;
         int panelH = (TILE * GRID_H + 40) * scale;
         
@@ -189,55 +188,61 @@ public class GamePanel extends JPanel implements ActionListener {
         for (Brick b : allBricks) b.draw(g2, scale);
         g2.translate(-OFFSET_X * scale, -OFFSET_Y * scale);
 
-        // --- 2. VẼ Ô ĐIỂM ---
+        // --- 2. VẼ Ô SCORE ---
         int scoreBoxX = (OFFSET_X + TILE * GRID_W + 20) * scale;
         int scoreBoxY = OFFSET_Y * scale;
-        int scoreBoxW = 90 * scale; 
-        int scoreBoxH = 40 * scale;
+        int scoreBoxW = 95 * scale; 
+        int scoreBoxH = 50 * scale;
+
         g2.setColor(Color.WHITE);
         g2.fillRect(scoreBoxX, scoreBoxY, scoreBoxW, scoreBoxH);
         g2.setColor(Color.BLACK);
         g2.drawRect(scoreBoxX, scoreBoxY, scoreBoxW, scoreBoxH);
         
-        g2.setFont(new Font("Monospaced", Font.BOLD, 14 * scale));
-        String scoreText = String.format("%06d", score);
-        FontMetrics scoreMetrics = g2.getFontMetrics();
-        int textX = scoreBoxX + (scoreBoxW - scoreMetrics.stringWidth(scoreText)) / 2;
-        int textY = scoreBoxY + (scoreBoxH - scoreMetrics.getHeight()) / 2 + scoreMetrics.getAscent();
-        g2.drawString(scoreText, textX, textY);
+        // Vẽ chữ nhãn "SCORE" căn giữa
+        g2.setFont(new Font("Monospaced", Font.BOLD, 10 * scale));
+        FontMetrics fm = g2.getFontMetrics();
+        String labelScore = "SCORE";
+        int labelScoreX = scoreBoxX + (scoreBoxW - fm.stringWidth(labelScore)) / 2;
+        g2.drawString(labelScore, labelScoreX, scoreBoxY + 15 * scale);
 
-        // --- 3. VẼ Ô GẠCH TIẾP THEO (CĂN GIỮA KHỐI GẠCH) ---
-        int nextBoxX = scoreBoxX + 10 * scale; // Căn chỉnh lại vị trí X cho cân đối
+        // Vẽ con số điểm căn giữa
+        g2.setFont(new Font("Monospaced", Font.BOLD, 14 * scale));
+        String scoreVal = String.format("%06d", score);
+        int valScoreX = scoreBoxX + (scoreBoxW - g2.getFontMetrics().stringWidth(scoreVal)) / 2;
+        g2.drawString(scoreVal, valScoreX, scoreBoxY + 35 * scale);
+
+        // --- 3. VẼ Ô NEXT ---
+        int nextBoxX = scoreBoxX + 10 * scale;
         int nextBoxY = scoreBoxY + 100 * scale;
-        int nextBoxSize = 70 * scale; // Tăng nhẹ kích thước ô để gạch trông thoải mái hơn
+        int nextBoxSize = 75 * scale;
 
         g2.setColor(Color.WHITE);
         g2.fillRect(nextBoxX, nextBoxY, nextBoxSize, nextBoxSize);
         g2.setColor(Color.BLACK);
         g2.drawRect(nextBoxX, nextBoxY, nextBoxSize, nextBoxSize);
 
+        // Vẽ chữ nhãn "NEXT" căn giữa
+        g2.setFont(new Font("Monospaced", Font.BOLD, 10 * scale));
+        String labelNext = "NEXT";
+        int labelNextX = nextBoxX + (nextBoxSize - g2.getFontMetrics().stringWidth(labelNext)) / 2;
+        g2.drawString(labelNext, labelNextX, nextBoxY + 15 * scale);
+
         if (nextShape != null) {
-            // Tìm giới hạn (bounds) của khối gạch hiện tại
             double minX = 999, maxX = -999, minY = 999, maxY = -999;
             for (Brick b : nextShape.bricks) {
-                minX = Math.min(minX, b.x);
-                maxX = Math.max(maxX, b.x);
-                minY = Math.min(minY, b.y);
-                maxY = Math.max(maxY, b.y);
+                minX = Math.min(minX, b.x); maxX = Math.max(maxX, b.x);
+                minY = Math.min(minY, b.y); maxY = Math.max(maxY, b.y);
             }
-            
-            // Tính toán kích thước thực tế của khối gạch (theo đơn vị TILE)
-            double pieceWidth = (maxX - minX + TILE) * scale;
-            double pieceHeight = (maxY - minY + TILE) * scale;
+            double pW = (maxX - minX + TILE) * scale;
+            double pH = (maxY - minY + TILE) * scale;
 
-            // Tính toán tọa độ dịch chuyển để đưa tâm khối gạch vào tâm ô vuông
-            double tx = nextBoxX + (nextBoxSize - pieceWidth) / 2.0 - (minX * scale);
-            double ty = nextBoxY + (nextBoxSize - pieceHeight) / 2.0 - (minY * scale);
+            // Căn giữa khối gạch vào phần còn lại của ô (phía dưới chữ NEXT)
+            double tx = nextBoxX + (nextBoxSize - pW) / 2.0 - (minX * scale);
+            double ty = nextBoxY + 20 * scale + (nextBoxSize - 20 * scale - pH) / 2.0 - (minY * scale);
 
             g2.translate(tx, ty);
-            for (Brick b : nextShape.bricks) {
-                b.draw(g2, scale);
-            }
+            for (Brick b : nextShape.bricks) b.draw(g2, scale);
             g2.translate(-tx, -ty);
         }
 
@@ -248,10 +253,10 @@ public class GamePanel extends JPanel implements ActionListener {
             g2.setColor(Color.RED);
             g2.setFont(new Font("Arial", Font.BOLD, 20 * scale));
             String msg = "GAME OVER";
-            FontMetrics msgMetrics = g2.getFontMetrics();
-            int x = (OFFSET_X * scale) + (boardW - msgMetrics.stringWidth(msg)) / 2;
-            int y = (OFFSET_Y * scale) + (boardH / 2);
-            g2.drawString(msg, x, y);
+            FontMetrics msgFm = g2.getFontMetrics();
+            int gx = (OFFSET_X * scale) + (boardW - msgFm.stringWidth(msg)) / 2;
+            int gy = (OFFSET_Y * scale) + (boardH / 2);
+            g2.drawString(msg, gx, gy);
         }
     }
 }
