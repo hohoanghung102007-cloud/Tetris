@@ -10,7 +10,11 @@ public class GamePanel extends JPanel implements ActionListener {
     private final int TILE = 13;
     private int scale;
 
+    private final int OFFSET_X = 20;
+    private final int OFFSET_Y = 20;
+
     private Shape activeShape;
+    private Shape nextShape; 
     private ArrayList<Brick> settledBricks = new ArrayList<>();
     private ArrayList<String> typeBag = new ArrayList<>();
     private Timer timer;
@@ -19,14 +23,16 @@ public class GamePanel extends JPanel implements ActionListener {
     private double fastFallSpeed = 5.0; 
     private boolean isFastFalling = false;
 
-    // --- CÁC BIẾN MỚI THÊM ---
     private int score = 0;
     private boolean isGameOver = false;
 
     public GamePanel(int scale) {
         this.scale = scale;
-        this.setPreferredSize(new Dimension(TILE * GRID_W * scale, TILE * GRID_H * scale));
-        this.setBackground(new Color(20, 20, 20));
+        int panelW = (TILE * GRID_W + 120) * scale;
+        int panelH = (TILE * GRID_H + 40) * scale;
+        
+        this.setPreferredSize(new Dimension(panelW, panelH));
+        this.setBackground(new Color(240, 240, 240)); 
         
         spawnNewShape();
         
@@ -37,7 +43,7 @@ public class GamePanel extends JPanel implements ActionListener {
         addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
-                if (isGameOver) return; // Nếu game over thì không cho bấm nút
+                if (isGameOver) return;
                 if (e.getKeyCode() == KeyEvent.VK_LEFT) tryMove(-TILE, 0);
                 if (e.getKeyCode() == KeyEvent.VK_RIGHT) tryMove(TILE, 0);
                 if (e.getKeyCode() == KeyEvent.VK_DOWN) isFastFalling = true;
@@ -57,14 +63,26 @@ public class GamePanel extends JPanel implements ActionListener {
             for (String t : types) typeBag.add(t);
             Collections.shuffle(typeBag);
         }
-        
-        // Tạo gạch mới
-        activeShape = new Shape(typeBag.remove(0), TILE * (GRID_W / 2), 0);
 
-        // KIỂM TRA GAME OVER: Nếu gạch mới sinh ra đã va chạm ngay lập tức
+        if (nextShape == null) {
+            nextShape = new Shape(typeBag.remove(0), 0, 0);
+        }
+        
+        activeShape = nextShape;
+        for(Brick b : activeShape.bricks) {
+            b.x += TILE * (GRID_W / 2);
+        }
+
+        if (typeBag.isEmpty()) {
+            String[] types = {"I", "O", "T", "L", "J"};
+            for (String t : types) typeBag.add(t);
+            Collections.shuffle(typeBag);
+        }
+        nextShape = new Shape(typeBag.remove(0), 0, 0);
+
         if (isColliding()) {
             isGameOver = true;
-            timer.stop(); // Dừng vòng lặp game
+            timer.stop();
         }
     }
 
@@ -91,9 +109,7 @@ public class GamePanel extends JPanel implements ActionListener {
 
     private boolean isColliding() {
         for (Brick b : activeShape.bricks) {
-            // Chạm biên trái/phải/dưới
             if (b.x < 0 || b.x >= TILE * GRID_W || b.y >= TILE * GRID_H) return true;
-            // Chạm gạch đã cố định
             for (Brick s : settledBricks) {
                 if (b.getHitbox().intersects(s.getHitbox())) return true;
             }
@@ -115,7 +131,6 @@ public class GamePanel extends JPanel implements ActionListener {
     @Override
     public void actionPerformed(ActionEvent e) {
         if (isGameOver) return;
-
         double currentMoveSpeed = isFastFalling ? fastFallSpeed : fallSpeed;
         for (int i = 0; i < (int)currentMoveSpeed; i++) {
             if (!checkBottomCollision()) {
@@ -150,8 +165,6 @@ public class GamePanel extends JPanel implements ActionListener {
                 }
             }
         }
-
-        // Quy tắc tính điểm từ ảnh bạn gửi
         if (linesCleared == 1) score += 100;
         else if (linesCleared == 2) score += 300;
         else if (linesCleared == 3) score += 500;
@@ -161,45 +174,67 @@ public class GamePanel extends JPanel implements ActionListener {
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-        
-        // Vẽ gạch
-        ArrayList<Brick> allVisibleBricks = new ArrayList<>(settledBricks);
-        if (activeShape != null) allVisibleBricks.addAll(activeShape.bricks);
-        allVisibleBricks.sort((b1, b2) -> Double.compare(b2.y, b1.y));
+        Graphics2D g2 = (Graphics2D) g;
 
-        for (Brick b : allVisibleBricks) {
-            b.draw(g, scale);
+        int boardW = TILE * GRID_W * scale;
+        int boardH = TILE * GRID_H * scale;
+        g2.setColor(Color.WHITE);
+        g2.fillRect(OFFSET_X * scale, OFFSET_Y * scale, boardW, boardH);
+        g2.setColor(Color.BLACK);
+        g2.setStroke(new BasicStroke(3));
+        g2.drawRect(OFFSET_X * scale, OFFSET_Y * scale, boardW, boardH);
+
+        g2.translate(OFFSET_X * scale, OFFSET_Y * scale);
+        ArrayList<Brick> allBricks = new ArrayList<>(settledBricks);
+        if (activeShape != null) allBricks.addAll(activeShape.bricks);
+        for (Brick b : allBricks) b.draw(g2, scale);
+        g2.translate(-OFFSET_X * scale, -OFFSET_Y * scale);
+
+        int scoreBoxX = (OFFSET_X + TILE * GRID_W + 20) * scale;
+        int scoreBoxY = OFFSET_Y * scale;
+        int scoreBoxW = 80 * scale;
+        int scoreBoxH = 40 * scale;
+
+        g2.setColor(Color.WHITE);
+        g2.fillRect(scoreBoxX, scoreBoxY, scoreBoxW, scoreBoxH);
+        g2.setColor(Color.BLACK);
+        g2.drawRect(scoreBoxX, scoreBoxY, scoreBoxW, scoreBoxH);
+        
+        g2.setFont(new Font("Monospaced", Font.BOLD, 12 * scale));
+        g2.drawString(String.format("%06d", score), scoreBoxX + 10 * scale, scoreBoxY + 25 * scale);
+
+        int nextBoxX = scoreBoxX + 10 * scale;
+        int nextBoxY = scoreBoxY + 100 * scale;
+        int nextBoxSize = 60 * scale;
+
+        g2.setColor(Color.WHITE);
+        g2.fillRect(nextBoxX, nextBoxY, nextBoxSize, nextBoxSize);
+        g2.setColor(Color.BLACK);
+        g2.drawRect(nextBoxX, nextBoxY, nextBoxSize, nextBoxSize);
+
+        if (nextShape != null) {
+            g2.translate(nextBoxX + 15 * scale, nextBoxY + 15 * scale);
+            for (Brick b : nextShape.bricks) {
+                // ĐÃ SỬA LỖI Ở ĐÂY: Dùng double thay vì int
+                double originalX = b.x; 
+                double originalY = b.y;
+                
+                b.x = (b.x / TILE) * (TILE - 2); 
+                b.y = (b.y / TILE) * (TILE - 2);
+                b.draw(g2, scale);
+                
+                b.x = originalX; 
+                b.y = originalY; 
+            }
+            g2.translate(-(nextBoxX + 15 * scale), -(nextBoxY + 15 * scale));
         }
 
-        // --- VẼ ĐIỂM SỐ ---
-        g.setColor(Color.WHITE);
-        g.setFont(new Font("Arial", Font.BOLD, 8 * scale));
-        g.drawString("SCORE: " + score, 5 * scale, 15 * scale);
-
-        // --- VẼ GIAO DIỆN GAME OVER ---
         if (isGameOver) {
-            // Vẽ lớp phủ tối màu
-            g.setColor(new Color(0, 0, 0, 180));
-            g.fillRect(0, 0, getWidth(), getHeight());
-
-            // Vẽ chữ GAME OVER
-            g.setColor(Color.RED);
-            g.setFont(new Font("Arial", Font.BOLD, 15 * scale));
-            String msg = "GAME OVER";
-            
-            // Tính toán để căn giữa chữ
-            FontMetrics metrics = g.getFontMetrics();
-            int x = (getWidth() - metrics.stringWidth(msg)) / 2;
-            int y = getHeight() / 2;
-            
-            g.drawString(msg, x, y);
-
-            // Vẽ điểm chung cuộc dưới chữ Game Over
-            g.setColor(Color.WHITE);
-            g.setFont(new Font("Arial", Font.BOLD, 8 * scale));
-            String finalScore = "Final Score: " + score;
-            int xScore = (getWidth() - g.getFontMetrics().stringWidth(finalScore)) / 2;
-            g.drawString(finalScore, xScore, y + 20 * scale);
+            g2.setColor(new Color(0, 0, 0, 150));
+            g2.fillRect(0, 0, getWidth(), getHeight());
+            g2.setColor(Color.RED);
+            g2.setFont(new Font("Arial", Font.BOLD, 20 * scale));
+            g2.drawString("GAME OVER", (OFFSET_X + 20) * scale, boardH / 2 + OFFSET_Y * scale);
         }
     }
 }
