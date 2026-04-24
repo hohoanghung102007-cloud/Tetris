@@ -19,6 +19,9 @@ public class GamePanel extends JPanel implements ActionListener {
     private double fastFallSpeed = 5.0; 
     private boolean isFastFalling = false;
 
+    // --- BIẾN ĐIỂM SỐ MỚI THÊM ---
+    private int score = 0;
+
     public GamePanel(int scale) {
         this.scale = scale;
         this.setPreferredSize(new Dimension(TILE * GRID_W * scale, TILE * GRID_H * scale));
@@ -115,13 +118,16 @@ public class GamePanel extends JPanel implements ActionListener {
         repaint();
     }
 
+    // --- HÀM XỬ LÝ XÓA HÀNG VÀ TÍNH ĐIỂM ĐÃ CẬP NHẬT ---
     private void checkFullRows() {
+        int linesCleared = 0; 
         for (int rowY = 0; rowY < TILE * GRID_H; rowY += TILE) {
             int count = 0;
             for (Brick b : settledBricks) {
                 if ((int)Math.round(b.y) == rowY) count++;
             }
             if (count >= GRID_W) {
+                linesCleared++; // Phát hiện 1 hàng đầy
                 final int targetY = rowY;
                 settledBricks.removeIf(b -> (int)Math.round(b.y) == targetY);
                 for (Brick b : settledBricks) {
@@ -129,18 +135,32 @@ public class GamePanel extends JPanel implements ActionListener {
                 }
             }
         }
+
+        // Áp dụng quy tắc tính điểm từ ảnh của bạn
+        if (linesCleared == 1) score += 100;
+        else if (linesCleared == 2) score += 300;
+        else if (linesCleared == 3) score += 500;
+        else if (linesCleared >= 4) score += 1200;
     }
 
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
+        
+        // Sắp xếp và vẽ gạch
         ArrayList<Brick> allVisibleBricks = new ArrayList<>(settledBricks);
         if (activeShape != null) allVisibleBricks.addAll(activeShape.bricks);
-
         allVisibleBricks.sort((b1, b2) -> Double.compare(b2.y, b1.y));
 
         for (Brick b : allVisibleBricks) {
             b.draw(g, scale);
         }
+
+        // --- HỆ THỐNG HIỂN THỊ ĐIỂM SỐ ---
+        g.setColor(Color.WHITE);
+        g.setFont(new Font("Monospaced", Font.BOLD, 10 * scale)); // Tự động co giãn theo scale
+        
+        // Vẽ chữ Score và số điểm ở góc trên bên trái màn hình
+        g.drawString("SCORE: " + score, 10, 20 * scale);
     }
 }
