@@ -28,7 +28,7 @@ public class GamePanel extends JPanel implements ActionListener {
 
     public GamePanel(int scale) {
         this.scale = scale;
-        // TĂNG CHIỀU RỘNG PANEL: Thêm +140 thay vì +120 để không bị mất cạnh phải
+        // Tăng chiều rộng để đảm bảo không mất cạnh phải
         int panelW = (TILE * GRID_W + 140) * scale;
         int panelH = (TILE * GRID_H + 40) * scale;
         
@@ -189,18 +189,16 @@ public class GamePanel extends JPanel implements ActionListener {
         for (Brick b : allBricks) b.draw(g2, scale);
         g2.translate(-OFFSET_X * scale, -OFFSET_Y * scale);
 
-        // --- 2. VẼ Ô ĐIỂM (CĂN GIỮA SỐ) ---
+        // --- 2. VẼ Ô ĐIỂM ---
         int scoreBoxX = (OFFSET_X + TILE * GRID_W + 20) * scale;
         int scoreBoxY = OFFSET_Y * scale;
-        int scoreBoxW = 90 * scale; // Tăng nhẹ độ rộng box
+        int scoreBoxW = 90 * scale; 
         int scoreBoxH = 40 * scale;
-
         g2.setColor(Color.WHITE);
         g2.fillRect(scoreBoxX, scoreBoxY, scoreBoxW, scoreBoxH);
         g2.setColor(Color.BLACK);
         g2.drawRect(scoreBoxX, scoreBoxY, scoreBoxW, scoreBoxH);
         
-        // Logic căn giữa số điểm
         g2.setFont(new Font("Monospaced", Font.BOLD, 14 * scale));
         String scoreText = String.format("%06d", score);
         FontMetrics scoreMetrics = g2.getFontMetrics();
@@ -208,24 +206,39 @@ public class GamePanel extends JPanel implements ActionListener {
         int textY = scoreBoxY + (scoreBoxH - scoreMetrics.getHeight()) / 2 + scoreMetrics.getAscent();
         g2.drawString(scoreText, textX, textY);
 
-        // --- 3. VẼ Ô GẠCH TIẾP THEO ---
-        int nextBoxX = scoreBoxX + 15 * scale;
+        // --- 3. VẼ Ô GẠCH TIẾP THEO (CĂN GIỮA KHỐI GẠCH) ---
+        int nextBoxX = scoreBoxX + 10 * scale; // Căn chỉnh lại vị trí X cho cân đối
         int nextBoxY = scoreBoxY + 100 * scale;
-        int nextBoxSize = 60 * scale;
+        int nextBoxSize = 70 * scale; // Tăng nhẹ kích thước ô để gạch trông thoải mái hơn
+
         g2.setColor(Color.WHITE);
         g2.fillRect(nextBoxX, nextBoxY, nextBoxSize, nextBoxSize);
         g2.setColor(Color.BLACK);
         g2.drawRect(nextBoxX, nextBoxY, nextBoxSize, nextBoxSize);
 
         if (nextShape != null) {
-            g2.translate(nextBoxX + 15 * scale, nextBoxY + 15 * scale);
+            // Tìm giới hạn (bounds) của khối gạch hiện tại
+            double minX = 999, maxX = -999, minY = 999, maxY = -999;
             for (Brick b : nextShape.bricks) {
-                double originalX = b.x; double originalY = b.y;
-                b.x = (b.x / TILE) * (TILE - 2); b.y = (b.y / TILE) * (TILE - 2);
-                b.draw(g2, scale);
-                b.x = originalX; b.y = originalY;
+                minX = Math.min(minX, b.x);
+                maxX = Math.max(maxX, b.x);
+                minY = Math.min(minY, b.y);
+                maxY = Math.max(maxY, b.y);
             }
-            g2.translate(-(nextBoxX + 15 * scale), -(nextBoxY + 15 * scale));
+            
+            // Tính toán kích thước thực tế của khối gạch (theo đơn vị TILE)
+            double pieceWidth = (maxX - minX + TILE) * scale;
+            double pieceHeight = (maxY - minY + TILE) * scale;
+
+            // Tính toán tọa độ dịch chuyển để đưa tâm khối gạch vào tâm ô vuông
+            double tx = nextBoxX + (nextBoxSize - pieceWidth) / 2.0 - (minX * scale);
+            double ty = nextBoxY + (nextBoxSize - pieceHeight) / 2.0 - (minY * scale);
+
+            g2.translate(tx, ty);
+            for (Brick b : nextShape.bricks) {
+                b.draw(g2, scale);
+            }
+            g2.translate(-tx, -ty);
         }
 
         // --- 4. GAME OVER ---
